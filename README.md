@@ -34,6 +34,21 @@ docker compose down
 
 Nothing else is needed. Docker pulls the image; the overlay is applied at container start.
 
+## Bulk-creating projects
+
+`project/` is a self-contained workspace for creating one Label Studio project per court case, complete with a per-case label config and the case audio uploaded as a task.
+
+```
+project/
+├── cases/                 # one JSON per case
+├── audio/                 # matching audio file (same stem)
+├── label_template.xml
+├── bulk_create.py
+└── README.md
+```
+
+Drop your JSONs and audio files in (matched by file stem — `233333364.json` ↔ `233333364.wav`), set `LS_TOKEN`, run `python3 bulk_create.py`. Full instructions in [`project/README.md`](project/README.md).
+
 ## How translation works
 
 1. Django serves `base.html` (or `simple.html`) which includes one `<script>` tag pointing to `/static/js/arabic.js`.

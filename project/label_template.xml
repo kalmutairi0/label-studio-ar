@@ -1,0 +1,20 @@
+<View>
+  <Audio name="audio" value="$audio"/>
+  <Labels name="speaker" toName="audio">
+    <Label value="قاضي"/>
+    <Label value="مساعد"/>
+    <Label value="المدعي"/>
+    <Label value="المدعى عليه"/>
+    <Label value="محامي"/>
+    <Label value="شاهد"/>
+  </Labels>
+{{CHOICES}}
+  <TextArea
+    name="text"
+    toName="audio"
+    perRegion="true"
+    editable="true"
+    rows="3"
+    displayMode="region-list"
+  />
+</View>
