@@ -73,6 +73,8 @@ If you want to change the speaker role list (add `مترجم`, drop `مساعد`
 1. The `<Label value="..."/>` lines inside `label_template.xml`.
 2. The `ROLES` table at the top of `bulk_create.py` — each row maps a JSON key to its Arabic label and the choices-block name attribute.
 
+If you change the template and the script breaks or produces an empty `<Choices>` section, paste the contents of `FIX_TEMPLATE_PROMPT.txt` into ChatGPT, fill in your new template + a sample case JSON where indicated, and it will hand back the exact patches for `ROLES`, `label_template.xml`, and (if needed) the case JSON shape.
+
 ## Auth note (LS 1.23+)
 
 The script auto-detects whether `LS_TOKEN` is a JWT Personal Access Token (3 segments separated by `.`) or a legacy 40-char DRF token, and sends the correct `Bearer` / `Token` scheme. If you see `legacy token authentication has been disabled for this organization`, either use a Personal Access Token instead, or re-enable legacy tokens for your org:

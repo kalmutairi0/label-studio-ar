@@ -1,0 +1,135 @@
+USE THIS PROMPT WHEN
+====================
+You changed `label_template.xml` (or your JSON shape) and `bulk_create.py` now
+fails, produces an empty `<Choices>` block, or rejects the config.
+
+Paste everything below into ChatGPT, then fill in the two "PASTE … HERE"
+blocks with your new template and one sample case JSON.
+
+---------------- COPY EVERYTHING BELOW THIS LINE ----------------
+
+You are helping me modify a Python script that bulk-creates Label Studio
+projects from local JSON files. I changed my XML template and/or my JSON
+shape and the script may no longer work. Your job: tell me exactly what to
+edit so it works again.
+
+## How the script works
+
+`bulk_create.py` loops over JSON files in `cases/`, matches each one to an
+audio file in `audio/` by file stem (`233333364.json` ↔ `233333364.wav`),
+then for each case:
+
+1. Reads `label_template.xml`.
+2. For every speaker role with names in the case JSON, generates one
+   `<Choices>` block keyed to that role's label.
+3. Replaces `{{CHOICES}}` in the template with the generated blocks.
+4. POSTs the result as a new Label Studio project's `label_config`.
+5. Uploads the matching audio file as one task.
+
+The role mapping lives in the `ROLES` table at the top of `bulk_create.py`:
+
+```python
+ROLES = [
+    # JSON key,       label value (Arabic),  <Choices> name attribute
+    ("judges",        "قاضي",                "judge_name"),
+    ("assistants",    "مساعد",               "assistant_name"),
+    ("plaintiffs",    "المدعي",              "plaintiff_name"),
+    ("defendants",    "المدعى عليه",         "defendant_name"),
+    ("lawyers",       "محامي",               "lawyer_name"),
+    ("witnesses",     "شاهد",                "witness_name"),
+]
+```
+
+Contract:
+- Every `<Label value="X"/>` in the template that should pull names from the
+  case JSON must have a row in `ROLES` whose middle column equals `X`.
+- The first column of each `ROLES` row must equal the key under
+  `participants.<key>` in the case JSON.
+- The template must contain the literal token `{{CHOICES}}` exactly once.
+
+## Current template (label_template.xml)
+
+```xml
+<View>
+  <Audio name="audio" value="$audio"/>
+  <Labels name="speaker" toName="audio">
+    <Label value="قاضي"/>
+    <Label value="مساعد"/>
+    <Label value="المدعي"/>
+    <Label value="المدعى عليه"/>
+    <Label value="محامي"/>
+    <Label value="شاهد"/>
+  </Labels>
+{{CHOICES}}
+  <TextArea
+    name="text"
+    toName="audio"
+    perRegion="true"
+    editable="true"
+    rows="3"
+    displayMode="region-list"
+  />
+</View>
+```
+
+## Current JSON shape (per case)
+
+```json
+{
+  "case_id":     "233333364",
+  "title":       "قضية رقم 233333364",
+  "description": "",
+  "participants": {
+    "judges":     ["..."],
+    "assistants": ["..."],
+    "plaintiffs": ["..."],
+    "defendants": ["..."],
+    "lawyers":    ["..."],
+    "witnesses":  ["..."]
+  }
+}
+```
+
+## What I'm changing
+
+### My new template
+```xml
+PASTE YOUR NEW XML TEMPLATE HERE
+```
+
+### A real sample of my new JSON
+```json
+PASTE ONE SAMPLE CASE JSON HERE
+```
+
+## What I need from you (exact format, in this order)
+
+1. **Issues found** — a numbered list of every mismatch, missing piece, or
+   breaking change. Flag as CRITICAL:
+   - `{{CHOICES}}` missing from the new template.
+   - Any `<Label value="X"/>` in the new template that has no matching row
+     in `ROLES`.
+   - Any `participants.<key>` in the JSON that has no matching row in
+     `ROLES`.
+   - Any duplicated `name=` attribute across `<Audio>`, `<Labels>`,
+     `<Choices>`, `<TextArea>` (Label Studio rejects this).
+
+2. **The exact new `ROLES` table** to paste into `bulk_create.py`, replacing
+   the old one. Keep the same Python syntax and the column comment.
+
+3. **The exact final `label_template.xml`** (in case you had to add
+   `{{CHOICES}}` or fix structure). Show the full file inside a single
+   ```xml fence.
+
+4. **The exact new case JSON shape** (only if the participant keys must
+   change). Show one example inside a single ```json fence.
+
+5. **One-line verdict** at the end:
+   - `READY TO RUN` if no further user action is needed, OR
+   - `NEEDS USER ACTION:` followed by what I still have to do (e.g.
+     "rename JSON key `judge` -> `judges` in all 500 case files").
+
+Be terse. Do not explain Label Studio concepts. Do not restate what I
+already wrote. Just produce the patches.
+
+---------------- COPY EVERYTHING ABOVE THIS LINE ----------------
