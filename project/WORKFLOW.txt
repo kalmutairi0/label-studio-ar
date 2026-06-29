@@ -1,0 +1,240 @@
+================================================================================
+  LABEL STUDIO ARABIC - BULK PROJECT CREATION WORKFLOW
+================================================================================
+
+This file walks you through everything from a fresh machine to ~500 Label
+Studio projects created and ready to annotate. Follow top to bottom.
+
+
+--------------------------------------------------------------------------------
+  PREREQUISITES (one-time, per machine)
+--------------------------------------------------------------------------------
+
+You need:
+  - Docker Desktop installed and running
+  - Python 3.8 or newer (check: `python3 --version`)
+  - The `label-studio-ar` repo folder on disk
+  - Your case JSON files
+  - Your audio files (one per case)
+
+Install the script's Python dependency (one command, run from the repo root):
+
+  pip install requests
+
+
+--------------------------------------------------------------------------------
+  STEP 1 - BOOT LABEL STUDIO
+--------------------------------------------------------------------------------
+
+From the repo root (the folder containing `docker-compose.yml`):
+
+  docker compose up -d
+
+First time only: Docker pulls `heartexlabs/label-studio:1.23.0` and a Postgres
+image. Takes a few minutes depending on connection speed. After that it boots
+in seconds.
+
+Confirm it's running:
+
+  docker compose ps
+
+You should see `label-studio-app-1`, `label-studio-db-1`, and
+`label-studio-nginx-1` all `Up`.
+
+
+--------------------------------------------------------------------------------
+  STEP 2 - SIGN UP AND GET YOUR TOKEN
+--------------------------------------------------------------------------------
+
+1. Open http://localhost:8090 in your browser.
+2. Sign up with any email + password (this is a local-only database, no email
+   is sent anywhere). Remember the credentials.
+3. Top-right corner -> click your avatar -> Account & Settings.
+4. Scroll to "Personal Access Token" -> click Create -> Copy the token.
+
+Save the token in your shell for this session:
+
+  export LS_TOKEN=<paste the token here>
+  export LS_URL=http://localhost:8090
+
+(On Windows PowerShell use: `$env:LS_TOKEN="..."` and `$env:LS_URL="..."`)
+
+If you see "legacy token authentication has been disabled for this
+organization" later, you have two options:
+  a) Use a Personal Access Token (JWT) - the script auto-detects it, no
+     config change needed.
+  b) Re-enable legacy tokens for your org with this one-liner (from repo
+     root):
+       docker compose exec app python label_studio/manage.py shell -c \
+         "from organizations.models import Organization; \
+          o=Organization.objects.first(); \
+          o.jwt.legacy_api_tokens_enabled=True; o.jwt.save()"
+
+
+--------------------------------------------------------------------------------
+  STEP 3 - DROP YOUR FILES INTO THE PROJECT FOLDER
+--------------------------------------------------------------------------------
+
+The script lives in `project/`. Its layout:
+
+  project/
+  ├── cases/                 <- one JSON per case goes here
+  ├── audio/                 <- matching audio file goes here
+  ├── label_template.xml     <- the XML template, edit if needed
+  ├── bulk_create.py
+  ├── FIX_TEMPLATE_PROMPT.txt
+  └── README.md
+
+Drop all your case JSON files into `project/cases/`.
+Drop all your audio files into `project/audio/`.
+
+Files are matched by file stem (filename without extension). Example:
+
+  project/cases/233333364.json   matches   project/audio/233333364.wav
+
+Supported audio extensions: .wav, .mp3, .m4a, .ogg, .flac. The first one
+that exists wins.
+
+A case JSON looks like this (minimum):
+
+  {
+    "case_id": "233333364",
+    "title": "قضية رقم 233333364",
+    "participants": {
+      "plaintiffs": ["عثمان"],
+      "defendants": ["عبدالله"]
+    }
+  }
+
+Optional fields: `description`. The `title` defaults to `case_id`, which
+defaults to the file stem. Roles with no names: omit the key or use `[]`,
+and that `<Choices>` block won't be emitted.
+
+
+--------------------------------------------------------------------------------
+  STEP 4 - (OPTIONAL) ADJUST THE LABEL TEMPLATE
+--------------------------------------------------------------------------------
+
+Skip this step unless your XML needs to change.
+
+Open `project/label_template.xml` in any text editor. The shipped default
+matches the production XML used at the court (4 speaker labels, named
+choices for plaintiff and defendant only).
+
+Two rules when editing:
+  - Keep the literal token `{{CHOICES}}` somewhere in the file. The script
+    replaces it with the per-case `<Choices>` blocks.
+  - If you add a `<Label value="X"/>` that should generate a name picker,
+    also add a row for it in the `ROLES` table at the top of `bulk_create.py`.
+
+If your edits break the script (empty choices, HTTP 400, etc.), open
+`FIX_TEMPLATE_PROMPT.txt`, copy the section between the dashed lines,
+paste it into ChatGPT, fill in your new template + one sample case JSON
+where indicated, and apply the patches it returns.
+
+
+--------------------------------------------------------------------------------
+  STEP 5 - RUN THE BULK CREATE
+--------------------------------------------------------------------------------
+
+From the repo root:
+
+  cd project
+  python3 bulk_create.py
+
+(Make sure LS_TOKEN and LS_URL are still set from Step 2.)
+
+You'll see output like:
+
+  found 500 case JSON files in /.../project/cases
+    OK   233333364.json -> project 1 (audio: 233333364.wav)
+    OK   233333365.json -> project 2 (audio: 233333365.mp3)
+    SKIP 233333366.json: no matching audio file for stem '233333366'
+    FAIL 233333367.json: 400 Client Error :: ... :: ...
+    ...
+  done: created=498 skipped=1 failed=1 total=500
+
+Exit code is 0 on full success, 1 if any case failed.
+
+
+--------------------------------------------------------------------------------
+  STEP 6 - REVIEW THE RESULT
+--------------------------------------------------------------------------------
+
+Back in your browser at http://localhost:8090 you'll now see all created
+projects on the Projects page. Open any one to verify:
+
+  - The title and description are right (Arabic).
+  - The label config shows the speaker labels + the right name choices
+    for that specific case.
+  - The single audio task is loaded and playable.
+
+To open the labeling view: click the project, then "Label All Tasks".
+
+
+--------------------------------------------------------------------------------
+  STEP 7 - SHUTDOWN WHEN DONE
+--------------------------------------------------------------------------------
+
+Stop the containers (data is preserved on disk for next boot):
+
+  docker compose down
+
+Next time you want to keep working:
+
+  docker compose up -d
+
+The database, projects, annotations - all of it persists between sessions
+because Docker bind-mounts the data folder (`./mydata`) and the Postgres
+data folder (`./postgres-data`).
+
+To wipe everything and start over (destructive - deletes ALL projects and
+annotations):
+
+  docker compose down -v
+  rm -rf mydata postgres-data
+
+
+--------------------------------------------------------------------------------
+  TROUBLESHOOTING
+--------------------------------------------------------------------------------
+
+Q: Script says "LS_TOKEN env var required".
+A: You skipped or lost the `export LS_TOKEN=...` line. Re-run it in the
+   same terminal session, then re-run the script.
+
+Q: All cases fail with "401 Unauthorized".
+A: Wrong or expired token. Get a new one from Account & Settings ->
+   Personal Access Token.
+
+Q: "legacy token authentication has been disabled for this organization".
+A: See the one-liner in Step 2.
+
+Q: Cases SKIP because no matching audio.
+A: Check the stem matches exactly. `233333364.json` needs
+   `233333364.wav` (or .mp3 / .m4a / .ogg / .flac). Spaces, hyphens,
+   case differences all break the match.
+
+Q: A case FAILs with HTTP 400 from /api/projects/.
+A: Bad XML, usually a duplicate `name=` attribute or a missing
+   `{{CHOICES}}` placeholder. Use FIX_TEMPLATE_PROMPT.txt.
+
+Q: Audio plays but is silent or wrong format.
+A: Label Studio accepts whatever your browser does. If the file plays in
+   Chrome standalone, it'll play here. WAV (PCM 16-bit) is safest.
+
+Q: I edited a case JSON and re-ran - it created a duplicate project.
+A: The script doesn't check for existing projects by title. Delete the
+   old one in the UI before re-running.
+
+Q: Browser shows English text in some places.
+A: Hard reload (Ctrl+Shift+R / Cmd+Shift+R) to bust the arabic.js cache.
+   If still English, the string isn't in the dictionary yet - enable the
+   debug logger:
+     localStorage.LS_AR_DEBUG = '1'; location.reload();
+     // later in the console:
+     copy(__ls_ar_dump(2));   // copies missed strings to clipboard
+
+================================================================================
+  END
+================================================================================
