@@ -56,12 +56,8 @@ import requests
 
 ROLES = [
     # JSON key,       label value (Arabic),  <Choices> name attribute
-    ("judges",        "قاضي",                "judge_name"),
-    ("assistants",    "مساعد",               "assistant_name"),
     ("plaintiffs",    "المدعي",              "plaintiff_name"),
     ("defendants",    "المدعى عليه",         "defendant_name"),
-    ("lawyers",       "محامي",               "lawyer_name"),
-    ("witnesses",     "شاهد",                "witness_name"),
 ]
 
 AUDIO_EXTENSIONS = (".wav", ".mp3", ".m4a", ".ogg", ".flac")

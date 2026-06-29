@@ -31,14 +31,15 @@ The role mapping lives in the `ROLES` table at the top of `bulk_create.py`:
 ```python
 ROLES = [
     # JSON key,       label value (Arabic),  <Choices> name attribute
-    ("judges",        "قاضي",                "judge_name"),
-    ("assistants",    "مساعد",               "assistant_name"),
     ("plaintiffs",    "المدعي",              "plaintiff_name"),
     ("defendants",    "المدعى عليه",         "defendant_name"),
-    ("lawyers",       "محامي",               "lawyer_name"),
-    ("witnesses",     "شاهد",                "witness_name"),
 ]
 ```
+
+Note: speaker labels like `قاضي` and `مساعد` can exist in the template's
+`<Labels>` block without a matching `ROLES` row — they're then tag-only
+(no per-region name picker). Only add a `ROLES` row when you want a
+`<Choices>` block of names for that role.
 
 Contract:
 - Every `<Label value="X"/>` in the template that should pull names from the
@@ -51,24 +52,29 @@ Contract:
 
 ```xml
 <View>
+
+  <!-- Audio -->
   <Audio name="audio" value="$audio"/>
+
+  <!-- Main speaker role -->
   <Labels name="speaker" toName="audio">
     <Label value="قاضي"/>
     <Label value="مساعد"/>
     <Label value="المدعي"/>
     <Label value="المدعى عليه"/>
-    <Label value="محامي"/>
-    <Label value="شاهد"/>
   </Labels>
+
 {{CHOICES}}
+
+  <!-- Spoken text -->
   <TextArea
     name="text"
     toName="audio"
     perRegion="true"
     editable="true"
     rows="3"
-    displayMode="region-list"
   />
+
 </View>
 ```
 
@@ -80,12 +86,8 @@ Contract:
   "title":       "قضية رقم 233333364",
   "description": "",
   "participants": {
-    "judges":     ["..."],
-    "assistants": ["..."],
     "plaintiffs": ["..."],
-    "defendants": ["..."],
-    "lawyers":    ["..."],
-    "witnesses":  ["..."]
+    "defendants": ["..."]
   }
 }
 ```

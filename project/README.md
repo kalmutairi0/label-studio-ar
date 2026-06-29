@@ -30,18 +30,15 @@ Files in `cases/` and `audio/` are matched by **file stem** (the name without th
   "title":       "قضية رقم 233333364",
   "description": "",
   "participants": {
-    "judges":     ["محمد العلي"],
-    "assistants": ["خالد المطيري"],
-    "plaintiffs": ["عثمان السالم"],
-    "defendants": ["عبدالله الراشد"],
-    "lawyers":    ["فيصل الحربي", "نواف العنزي"],
-    "witnesses":  ["سعد القحطاني"]
+    "plaintiffs": ["عثمان"],
+    "defendants": ["عبدالله"]
   }
 }
 ```
 
 - `case_id`, `title`, `description` are optional. Defaults: `title` → `case_id` → file stem.
-- Any role with no names → omit the key or use `[]`. Its `<Choices>` block won't be emitted.
+- Speaker roles `قاضي` and `مساعد` are tag-only in the default template (you select them on a region but don't pick a specific name). If you want named judges/assistants too, add the matching `<Choices>` block to `label_template.xml` and a row to `ROLES` in `bulk_create.py`.
+- For roles you do track by name (`plaintiffs`, `defendants` by default), an empty array or omitted key skips the `<Choices>` block for that role.
 
 ## Run
 

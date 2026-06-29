@@ -1,20 +1,25 @@
 <View>
+
+  <!-- Audio -->
   <Audio name="audio" value="$audio"/>
+
+  <!-- Main speaker role -->
   <Labels name="speaker" toName="audio">
     <Label value="قاضي"/>
     <Label value="مساعد"/>
     <Label value="المدعي"/>
     <Label value="المدعى عليه"/>
-    <Label value="محامي"/>
-    <Label value="شاهد"/>
   </Labels>
+
 {{CHOICES}}
+
+  <!-- Spoken text -->
   <TextArea
     name="text"
     toName="audio"
     perRegion="true"
     editable="true"
     rows="3"
-    displayMode="region-list"
   />
+
 </View>
