@@ -34,7 +34,13 @@ A working sample lives in `../cases-example/case_001.json`.
 ### Run
 
 1. Boot Label Studio (`docker compose up` in the repo root).
-2. Sign up at <http://localhost:8090>. Open **Account & Settings → Access Token**, copy the token.
+2. Sign up at <http://localhost:8090>. Open **Account & Settings → Personal Access Token** and copy a JWT (recommended on LS 1.23+). The script auto-detects JWT vs legacy DRF tokens by shape, so either works.
+
+   If you see "legacy token authentication has been disabled for this organization" when running the script, your org is on the new default. Either use a Personal Access Token (JWT) instead, or, from inside the running container, toggle legacy tokens back on:
+   ```
+   docker compose exec app python label_studio/manage.py shell -c \
+     "from organizations.models import Organization; o=Organization.objects.first(); o.jwt.legacy_api_tokens_enabled=True; o.jwt.save()"
+   ```
 3. Install Python deps:
    ```
    pip install -r scripts/requirements.txt

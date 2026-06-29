@@ -6,3 +6,6 @@ deploy/
 .env
 .env.local
 node_modules/
+*.wav
+*.mp3
+*.m4a

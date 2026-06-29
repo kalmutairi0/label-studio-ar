@@ -133,8 +133,10 @@ def main(folder_arg: str) -> int:
         sys.stderr.write(f"not a directory: {folder}\n")
         return 2
 
+    # JWT (personal access token) has two dots; legacy DRF token is 40 hex chars.
+    scheme = "Bearer" if token.count(".") == 2 else "Token"
     session = requests.Session()
-    session.headers["Authorization"] = f"Token {token}"
+    session.headers["Authorization"] = f"{scheme} {token}"
 
     json_files = sorted(folder.glob("*.json"))
     print(f"found {len(json_files)} case JSON files in {folder}")
