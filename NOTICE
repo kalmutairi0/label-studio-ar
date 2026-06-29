@@ -1,0 +1,15 @@
+label-studio-ar
+Copyright 2026 Khalid Almutairi
+
+This project is an Arabic (RTL) localization overlay for Label Studio.
+It does NOT include or modify the Label Studio source code. Instead, it
+runs the official Docker image (heartexlabs/label-studio) unchanged and
+injects a small client-side script (arabic.js) at runtime via a bind
+mount to translate the DOM and apply RTL styling.
+
+Label Studio is copyright Heartex Inc. and contributors, and is licensed
+under the Apache License, Version 2.0. See:
+  https://github.com/HumanSignal/label-studio
+
+This overlay is also licensed under the Apache License, Version 2.0.
+See LICENSE for the full text.

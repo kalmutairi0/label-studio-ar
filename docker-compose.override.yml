@@ -1,0 +1,13 @@
+services:
+  app:
+    image: heartexlabs/label-studio:1.23.0
+    volumes:
+      - ./label_studio/templates/base.html:/label-studio/label_studio/templates/base.html:ro
+      - ./label_studio/templates/simple.html:/label-studio/label_studio/templates/simple.html:ro
+  nginx:
+    image: heartexlabs/label-studio:1.23.0
+    ports: !override
+      - "8090:8085"
+      - "8091:8086"
+    volumes:
+      - ./label_studio/core/static/js/arabic.js:/label-studio/label_studio/core/static_build/js/arabic.js:ro
