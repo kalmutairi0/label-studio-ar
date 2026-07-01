@@ -45,6 +45,7 @@ Usage:
 
 from __future__ import annotations
 
+import base64
 import json
 import mimetypes
 import os
@@ -66,6 +67,69 @@ HERE = Path(__file__).resolve().parent
 CASES_DIR = HERE / "cases"
 AUDIO_DIR = HERE / "audio"
 TEMPLATE = HERE / "label_template.xml"
+
+
+def jwt_payload(token: str) -> dict:
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return {}
+        pad = "=" * (-len(parts[1]) % 4)
+        return json.loads(base64.urlsafe_b64decode(parts[1] + pad))
+    except Exception:
+        return {}
+
+
+def exchange_refresh_for_access(base_url: str, refresh_token: str) -> str:
+    r = requests.post(
+        f"{base_url}/api/token/refresh/",
+        json={"refresh": refresh_token},
+        timeout=30,
+    )
+    r.raise_for_status()
+    return r.json()["access"]
+
+
+class LSSession(requests.Session):
+    """Session that auto-refreshes a short-lived access token on 401."""
+
+    def __init__(self, base_url: str, refresh_token: str | None):
+        super().__init__()
+        self.base_url = base_url
+        self.refresh_token = refresh_token
+
+    def _refresh(self) -> None:
+        access = exchange_refresh_for_access(self.base_url, self.refresh_token)
+        self.headers["Authorization"] = f"Bearer {access}"
+
+    def request(self, method, url, **kwargs):
+        r = super().request(method, url, **kwargs)
+        if r.status_code == 401 and self.refresh_token:
+            self._refresh()
+            r = super().request(method, url, **kwargs)
+        return r
+
+
+def build_authed_session(base_url: str, token: str) -> requests.Session:
+    # legacy DRF token: 40 hex chars, no dots
+    if token.count(".") != 2:
+        session = requests.Session()
+        session.headers["Authorization"] = f"Token {token}"
+        return session
+
+    payload = jwt_payload(token)
+    token_type = payload.get("token_type")
+
+    # LS 1.13+ personal access token = refresh token, must be exchanged
+    if token_type == "refresh":
+        session = LSSession(base_url, refresh_token=token)
+        session._refresh()
+        return session
+
+    # already an access token (or legacy JWT) — use directly
+    session = requests.Session()
+    session.headers["Authorization"] = f"Bearer {token}"
+    return session
 
 
 def render_choices_block(case: dict) -> str:
@@ -149,10 +213,7 @@ def main() -> int:
         sys.stderr.write(f"missing folder: {AUDIO_DIR}\n")
         return 2
 
-    # JWT (personal access token) has two dots; legacy DRF token is 40 hex chars.
-    scheme = "Bearer" if token.count(".") == 2 else "Token"
-    session = requests.Session()
-    session.headers["Authorization"] = f"{scheme} {token}"
+    session = build_authed_session(base_url, token)
 
     json_files = sorted(CASES_DIR.glob("*.json"))
     print(f"found {len(json_files)} case JSON files in {CASES_DIR}")
